@@ -1,0 +1,133 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: opendistro-elasticsearch-node1
+spec:
+  selector:
+    app: opendistro-elasticsearch-node1
+  ports:
+  - protocol: TCP
+    name: opendistro-elasticsearch-node1-9200
+    port: 9200
+    targetPort: 9200
+  - protocol: TCP
+    name: opendistro-elasticsearch-node1-9300
+    port: 9300
+    targetPort: 9300
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: opendistro-elasticsearch-node2
+spec:
+  selector:
+    app: opendistro-elasticsearch-node2
+  ports:
+  - protocol: TCP
+    name: opendistro-elasticsearch-node2-9200
+    port: 9200
+    targetPort: 9200
+  - protocol: TCP
+    name: opendistro-elasticsearch-node2-9300
+    port: 9300
+    targetPort: 9300
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: opendistro-elasticsearch-node1
+spec:
+  selector:
+    matchLabels:
+      app: opendistro-elasticsearch-node1
+  replicas: 1
+  template:
+    metadata:
+      labels:
+        app: opendistro-elasticsearch-node1
+    spec:
+      containers:
+      - name: opendistro-elasticsearch-node1
+        image: amazon/opendistro-for-elasticsearch:1.9.0
+        imagePullPolicy: Always
+        resources:
+          requests:
+            memory: "512Mi"
+            cpu: "250m"
+          limits:
+            memory: "4096Mi"
+            cpu: "500m"
+        env:
+        - name: ES_JAVA_OPTS
+          value: "-Xms512m -Xmx512m"
+        - name: node.name
+          value: "opendistro-elasticsearch-node1"
+        - name: discovery.seed_hosts
+          value: "opendistro-elasticsearch-node1,opendistro-elasticsearch-node2"
+        - name: cluster.initial_master_nodes
+          value: "opendistro-elasticsearch-node1,opendistro-elasticsearch-node2"
+        - name: node.master
+          value: "true"
+        - name: node.data
+          value: "true"
+        - name: node.ingest
+          value: "true"
+        ports:
+        - containerPort: 9200
+      initContainers:
+      - name: sysctl
+        image: busybox:1.28
+        securityContext:
+          privileged: true
+        command: ['sh', '-c', 'sysctl -w vm.max_map_count=262144']
+      restartPolicy: Always
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: opendistro-elasticsearch-node2
+spec:
+  selector:
+    matchLabels:
+      app: opendistro-elasticsearch-node2
+  replicas: 1
+  template:
+    metadata:
+      labels:
+        app: opendistro-elasticsearch-node2
+    spec:
+      containers:
+      - name: opendistro-elasticsearch-node2
+        image: amazon/opendistro-for-elasticsearch:1.9.0
+        imagePullPolicy: Always
+        resources:
+          requests:
+            memory: "512Mi"
+            cpu: "250m"
+          limits:
+            memory: "4096Mi"
+            cpu: "500m"
+        env:
+        - name: ES_JAVA_OPTS
+          value: "-Xms512m -Xmx512m"
+        - name: node.name
+          value: "opendistro-elasticsearch-node2"
+        - name: discovery.seed_hosts
+          value: "opendistro-elasticsearch-node1,opendistro-elasticsearch-node2"
+        - name: cluster.initial_master_nodes
+          value: "opendistro-elasticsearch-node1,opendistro-elasticsearch-node2"
+        - name: node.master
+          value: "true"
+        - name: node.data
+          value: "true"
+        - name: node.ingest
+          value: "true"
+        ports:
+        - containerPort: 9200
+      initContainers:
+      - name: sysctl
+        image: busybox:1.28
+        securityContext:
+          privileged: true
+        command: ['sh', '-c', 'sysctl -w vm.max_map_count=262144']
+      restartPolicy: Always
